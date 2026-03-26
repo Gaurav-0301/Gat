@@ -1,0 +1,253 @@
+.visitor-list-container,
+.visitor-register-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+  /* Stabilize scrollbars to avoid horizontal layout shift on appear/disappear */
+  min-height: 100vh;
+  overflow-y: scroll; /* force vertical scrollbar */
+  overflow-x: hidden; /* prevent accidental horizontal scroll */
+  scrollbar-gutter: stable both-edges; /* reserve gutter when supported */
+}
+
+.list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.list-header h2 {
+  margin: 0;
+  color: #333;
+}
+
+.search-bar {
+  margin-bottom: 1.5rem;
+}
+
+.search-bar input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.table-container {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  overflow-x: auto;
+}
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed; /* avoid reflow on content changes */
+}
+
+.data-table th,
+.data-table td {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 1px solid #f0f0f0;
+  vertical-align: middle; /* keep content centered without changing row height */
+}
+
+/* Column sizing and overflow handling (after removing Photo column) */
+/* 1: Name, 2: Email, 3: Phone, 4: Company, 5: Visit Count, 6: Status, 7: Actions */
+.data-table th:nth-child(1),
+.data-table td:nth-child(1) {
+  width: 200px;
+}
+
+.data-table th:nth-child(2),
+.data-table td:nth-child(2) {
+  width: 280px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.data-table th:nth-child(3),
+.data-table td:nth-child(3) {
+  width: 160px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.data-table th:nth-child(4),
+.data-table td:nth-child(4) {
+  width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.data-table th:nth-child(5),
+.data-table td:nth-child(5) {
+  width: 120px;
+}
+
+.data-table th:nth-child(6),
+.data-table td:nth-child(6) {
+  width: 140px;
+}
+
+.data-table th:nth-child(7),
+.data-table td:nth-child(7) {
+  width: 140px;
+}
+
+/* Lock visible row height via cells to prevent vertical jump */
+.data-table tbody td {
+  height: 72px; /* fixed visual height */
+}
+
+.data-table th {
+  background-color: #f8f9fa;
+  font-weight: 600;
+  color: #333;
+}
+
+.data-table tr:hover {
+  background-color: #f8f9fa; /* color-only hover to avoid shifts */
+  transform: none; /* ensure no transform on row hover */
+}
+
+.visitor-photo {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.badge-green {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.badge-red {
+  background-color: #ffebee;
+  color: #c62828;
+}
+
+.badge-blue {
+  background-color: #e3f2fd;
+  color: #1565c0;
+}
+
+.badge-orange {
+  background-color: #fff3e0;
+  color: #ef6c00;
+}
+
+.action-buttons {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 32px; /* ensure stable height */
+}
+
+.btn-icon {
+  background: none;
+  border: 0; /* fixed border width to avoid hover jumps */
+  font-size: 1.1rem; /* slightly smaller to fit inside fixed box */
+  cursor: pointer;
+  padding: 0; /* keep padding constant */
+  width: 32px;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease, background-color 0.15s ease; /* no transform transitions */
+}
+
+.btn-icon:hover {
+  transform: none; /* disable transform/scale/translate to prevent reflow */
+  background-color: rgba(0, 0, 0, 0.04); /* hover feedback via color only */
+}
+
+.btn-delete:hover {
+  filter: brightness(0.8);
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.page-info {
+  font-weight: 500;
+  color: #666;
+}
+
+.btn-secondary {
+  padding: 0.5rem 1rem;
+  background-color: #6c757d;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.3s;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: #5a6268;
+}
+
+.btn-secondary:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+/* Register Form Styles */
+.form-card {
+  background: #fff;
+  border-radius: 8px;
+  padding: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.form-card h2 {
+  margin: 0 0 1.5rem 0;
+  color: #333;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.photo-preview {
+  margin-top: 1rem;
+}
+
+.photo-preview img {
+  max-width: 200px;
+  max-height: 200px;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+  margin-top: 2rem;
+}

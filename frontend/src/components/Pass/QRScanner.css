@@ -1,0 +1,63 @@
+.qr-scanner-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.scanner-card {
+  background: #fff;
+  border-radius: 8px;
+  padding: 2rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.scanner-card h2 {
+  text-align: center;
+  margin-bottom: 1.5rem;
+  color: #333;
+}
+
+#qr-reader {
+  margin: 1rem 0;
+}
+
+.scanner-instruction {
+  text-align: center;
+  color: #666;
+  font-size: 0.9rem;
+  margin-top: 1rem;
+}
+
+.scan-result {
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin: 1rem 0;
+}
+
+.scan-result.success {
+  background-color: #e8f5e9;
+  border: 2px solid #4caf50;
+}
+
+.scan-result.error {
+  background-color: #ffebee;
+  border: 2px solid #f44336;
+}
+
+.scan-result h3 {
+  margin: 0 0 1rem 0;
+  text-align: center;
+}
+
+.pass-info {
+  margin: 1rem 0;
+}
+
+.pass-info p {
+  margin: 0.5rem 0;
+  color: #333;
+}
+
+.mt-2 {
+  margin-top: 1rem;
+}
