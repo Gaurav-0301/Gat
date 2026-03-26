@@ -271,7 +271,7 @@ This project is licensed under the ISC License.
 
 ## 👨‍💻 Author
 
-Aditya Jain
+Gaurav Kakpure
 
 ## 🤝 Contributing
 
