@@ -1,4 +1,4 @@
-require('dotenv').config({ path: require('path').resolve(__dirname, '.env') });
+require('dotenv').config(); // Simplified for Render/Production
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -18,35 +18,37 @@ const CheckLog = require('./models/CheckLog');
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// CORS config (allow common local dev frontend origins and any configured FRONTEND_URL)
-const allowedOrigins = [process.env.FRONTEND_URL].filter(Boolean).concat([
+// --- UPDATED CORS CONFIG ---
+const allowedOrigins = [
   'http://localhost:3000',
-  'http://localhost:3001'
-]);
+  'http://localhost:3001',
+  'https://gat-nine.vercel.app', // Your Vercel URL from screenshot
+  process.env.FRONTEND_URL        // From Render Environment Variables
+].filter(Boolean);
 
 app.use(cors({
   origin: (origin, callback) => {
-    // allow requests with no origin (like mobile apps, curl, or server-to-server)
+    // Allow requests with no origin (like mobile apps or Postman)
     if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) !== -1) {
+    
+    if (allowedOrigins.includes(origin) || /localhost(:\d+)?$/.test(origin)) {
       return callback(null, true);
     }
-    // For development convenience, if FRONTEND_URL not set, allow localhost origins
-    const isLocalhost = /localhost(:\d+)?$/.test(origin);
-    if (isLocalhost) return callback(null, true);
+    
     return callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Serve uploaded images
+// Handle preflight requests globally
+app.options('*', cors()); 
+
+// --- STATIC ASSETS ---
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Removed verbose request logging middleware used during debugging
-
-// Routes
+// --- ROUTES ---
 app.use('/api/auth', authRoutes);
 app.use('/api/visitors', visitorRoutes);
 app.use('/api/appointments', appointmentRoutes);
@@ -55,44 +57,38 @@ app.use('/api/checklogs', checkLogRoutes);
 
 // Health check
 app.get('/', (req, res) => {
-  res.status(200).json({ message: 'Visitor Pass Management API is running ✅' });
+  res.status(200).json({ 
+    status: 'success',
+    message: 'Gatekeeper API is live ✅',
+    timestamp: new Date().toISOString()
+  });
 });
 
-// Connect DB & Start server
-const PORT = process.env.PORT || 5000; // ✅ fallback
+// --- SERVER & DB CONNECTION ---
+const PORT = process.env.PORT || 5000;
 
 mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     app.listen(PORT, () => {
       console.log(`✅ Server running on port ${PORT}`);
       
-      // Verify email configuration on startup
-      console.log('\n=== Email Configuration Check ===');
-      console.log('EMAIL_SERVICE:', process.env.EMAIL_SERVICE || '❌ NOT SET');
-      console.log('EMAIL_USER:', process.env.EMAIL_USER || '❌ NOT SET');
-      console.log('EMAIL_PASS:', process.env.EMAIL_PASS ? '✓ SET (hidden)' : '❌ NOT SET');
-      
-      if (!process.env.EMAIL_SERVICE || !process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-        console.log('⚠️  WARNING: Email service not fully configured!');
-        console.log('   Appointment confirmations and QR codes will NOT be sent.');
-        console.log('   See EMAIL_TROUBLESHOOTING.md for setup instructions.');
-      } else {
-        console.log('✓ Email service configuration detected');
-        console.log('  Note: Use /api/auth/test-email to verify it works');
-      }
-      console.log('================================\n');
+      // Professional Config Logs
+      console.log('\n=== System Check ===');
+      console.log('FRONTEND_URL:', process.env.FRONTEND_URL || 'Using Localhost Defaults');
+      console.log('EMAIL_SERVICE:', process.env.EMAIL_SERVICE ? '✓' : '❌');
+      console.log('CLOUDINARY:', process.env.CLOUDINARY_CLOUD_NAME ? '✓' : '❌');
+      console.log('====================\n');
     });
 
-    // Auto-checkout scheduler: sets checkOutTime to checkInTime + MAX_DURATION
-    const MAX_DURATION_MIN = Number(process.env.AUTO_CHECKOUT_AFTER_MIN || 60); // default 60 min
-    const INTERVAL_MIN = Number(process.env.AUTO_CHECKOUT_INTERVAL_MIN || 5); // run every 5 min
+    // Auto-checkout scheduler
+    const MAX_DURATION_MIN = Number(process.env.AUTO_CHECKOUT_AFTER_MIN || 60);
+    const INTERVAL_MIN = Number(process.env.AUTO_CHECKOUT_INTERVAL_MIN || 5);
 
     const startAutoCheckoutJob = () => {
       const intervalMs = Math.max(INTERVAL_MIN, 1) * 60000;
       setInterval(async () => {
         try {
           const cutoff = new Date(Date.now() - MAX_DURATION_MIN * 60000);
-          // Find visitors still inside beyond the max duration
           const candidates = await CheckLog.find({
             checkOutTime: null,
             checkInTime: { $lte: cutoff }
@@ -107,7 +103,7 @@ mongoose.connect(process.env.MONGO_URI)
             await log.save();
           }
         } catch (e) {
-          // best-effort job; avoid crashing server
+          console.error('Auto-checkout background job error:', e.message);
         }
       }, intervalMs);
     };
