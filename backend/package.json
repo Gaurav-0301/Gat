@@ -7,7 +7,8 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "backfill:visitor-user": "node scripts/backfillVisitorUser.js",
-    "check:visitors": "node scripts/checkVisitorEmails.js"
+    "check:visitors": "node scripts/checkVisitorEmails.js",
+    "build": "npm install --legacy-peer-deps"
   },
   "author": "Aditya Jain",
   "license": "ISC",
