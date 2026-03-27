@@ -232,7 +232,6 @@ const getPass = async (req, res) => {
 // Verify pass by pass number or appointmentId
 const verifyPass = async (req, res) => {
   try {
-    // Coerce various input shapes into a string id/number
     const coerceToStringId = (value) => {
       if (value == null) return '';
       if (typeof value === 'string' || typeof value === 'number') return String(value).trim();
@@ -252,39 +251,38 @@ const verifyPass = async (req, res) => {
     const { passNumber: paramPassNumber } = req.params;
     const rawBodyValue = req.body?.value ?? req.body?.passNumber ?? req.body?.appointmentId;
     const passNumber = coerceToStringId(paramPassNumber || rawBodyValue);
+    
     if (!passNumber || passNumber === '[object Object]') {
       return res.status(400).json({ valid: false, error: 'Invalid value to verify' });
     }
+
     let pass = null;
 
-    // Try to resolve as appointmentId first (for QR-based check-in)
+    // 1. Try to resolve as appointmentId (QR scan)
     if (passNumber && mongoose.Types.ObjectId.isValid(passNumber)) {
-      const appointment = await Appointment.findById(passNumber).populate('visitor').populate('host', 'name department');
+      const appointment = await Appointment.findById(passNumber)
+        .populate('visitor')
+        .populate('host', 'name department');
+
       if (appointment) {
-        // Find the active pass associated with this appointment
         pass = await Pass.findOne({ 
-            appointment: new mongoose.Types.ObjectId(passNumber),
+          appointment: new mongoose.Types.ObjectId(passNumber),
           status: 'active'
         })
-          .populate('visitor')
-          .populate('host', 'name department');
+        .populate('visitor')
+        .populate('host', 'name department');
         
+        // Auto-issue pass if missing
         if (!pass) {
-          // Auto-issue a pass if none exists yet for this approved appointment
           try {
             const base = new Date(appointment.appointmentDate);
             const durationMinutes = Number(appointment.duration) || 60;
-            const bufferBeforeMin = 30;
-            const bufferAfterMin = 30;
-            const validFrom = new Date(base.getTime() - bufferBeforeMin * 60000);
-            const validUntil = new Date(base.getTime() + (durationMinutes + bufferAfterMin) * 60000);
-
             const newPass = new Pass({
-              visitor: appointment.visitor ? appointment.visitor._id : undefined,
+              visitor: appointment.visitor?._id,
               appointment: appointment._id,
-              host: appointment.host ? appointment.host._id : undefined,
-              validFrom,
-              validUntil,
+              host: appointment.host?._id,
+              validFrom: new Date(base.getTime() - 30 * 60000),
+              validUntil: new Date(base.getTime() + (durationMinutes + 30) * 60000),
               status: 'active'
             });
             await newPass.save();
@@ -292,13 +290,13 @@ const verifyPass = async (req, res) => {
               .populate('visitor')
               .populate('host', 'name department');
           } catch (e) {
-            console.warn('[VerifyPass] Failed to auto-issue pass during verify:', e?.message || e);
+            console.warn('[VerifyPass] Auto-issue failed:', e.message);
           }
         }
       }
     }
 
-    // Fall back to pass number lookup if appointment lookup didn't find a pass
+    // 2. Fallback to passNumber lookup
     if (!pass) {
       pass = await Pass.findOne({ passNumber })
         .populate('visitor')
@@ -306,13 +304,10 @@ const verifyPass = async (req, res) => {
     }
 
     if (!pass) {
-      return res.status(404).json({ 
-        valid: false, 
-        error: 'Pass not found' 
-      });
+      return res.status(404).json({ valid: false, error: 'Pass not found' });
     }
 
-    // Check if pass is active
+    // 3. Status Check (Active/Inactive)
     if (pass.status !== 'active') {
       return res.status(400).json({ 
         valid: false, 
@@ -320,39 +315,27 @@ const verifyPass = async (req, res) => {
       });
     }
 
-    // Check if pass is within valid time
-    // const now = new Date();
-    // if (now < pass.validFrom || now > pass.validUntil) {
-    //   return res.status(400).json({ 
-    //     valid: false, 
-    //     error: 'Pass is not valid at this time' 
-    //   });
-    // }
+    /** * TIME VALIDATION REMOVED 
+     * The pass will now verify regardless of validFrom/validUntil constraints.
+     */
 
-    // Check if visitor is blacklisted
+    // 4. Blacklist Check
     const visitor = await Visitor.findById(pass.visitor);
     if (visitor && visitor.isBlacklisted) {
-      return res.status(403).json({ 
-        valid: false, 
-        error: 'Visitor is blacklisted' 
-      });
+      return res.status(403).json({ valid: false, error: 'Visitor is blacklisted' });
     }
 
-    // Fetch appointment details including visitorPhoto if available
+    // 5. Photo Normalization & Response
     let appointmentDetails = null;
     if (pass.appointment) {
-      appointmentDetails = await Appointment.findById(pass.appointment).select('visitorPhoto appointmentDate appointmentTime location purpose');
+      appointmentDetails = await Appointment.findById(pass.appointment)
+        .select('visitorPhoto appointmentDate appointmentTime location purpose');
     }
 
-    // Normalize photo path to always start with /uploads
     const normalizePhotoPath = (p) => {
       if (!p) return null;
       let rel = String(p).trim();
-      if (/^https?:\/\//i.test(rel)) return rel; // already absolute URL
-      // Ignore absolute filesystem paths (e.g., C:\... or /var/...)
-      if (/^[a-zA-Z]:\\/.test(rel) || rel.startsWith('\\') || rel.startsWith('/var/') || rel.startsWith('/tmp/')) {
-        return null;
-      }
+      if (/^https?:\/\//i.test(rel)) return rel;
       if (!rel.startsWith('/uploads/')) {
         if (rel.startsWith('uploads/')) rel = `/${rel}`;
         else rel = `/uploads/${rel.replace(/^\/+/, '')}`;
@@ -360,26 +343,17 @@ const verifyPass = async (req, res) => {
       return rel;
     };
 
-    // Normalize visitor photo (may come from visitor profile if appointment photo missing)
-    const visitorPhotoNormalized = normalizePhotoPath(pass?.visitor?.photo);
-    const appointmentPhotoNormalized = normalizePhotoPath(appointmentDetails?.visitorPhoto);
+    const chosenPhoto = normalizePhotoPath(appointmentDetails?.visitorPhoto) || normalizePhotoPath(pass?.visitor?.photo);
 
-    // Return pass with best-available photo for check-in verification
-    const chosenPhoto = appointmentPhotoNormalized || visitorPhotoNormalized;
-    console.log('[verifyPass] appointmentPhoto:', appointmentPhotoNormalized, 'visitorPhoto:', visitorPhotoNormalized, 'chosen:', chosenPhoto);
-    const response = {
+    res.status(200).json({
       valid: true,
       pass,
       visitorPhoto: chosenPhoto
-    };
+    });
 
-    res.status(200).json(response);
   } catch (error) {
     console.error('[VerifyPass] Error:', error);
-    res.status(400).json({ 
-      valid: false, 
-      error: error.message 
-    });
+    res.status(400).json({ valid: false, error: error.message });
   }
 };
 
