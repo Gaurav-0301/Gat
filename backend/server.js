@@ -40,9 +40,8 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// FIXED LINE: This is the standard Express way to handle all preflights 
-// without triggering the "Missing parameter name" error in Node v22.
-app.options('*', cors()); 
+// FIXED: Using a named parameter catch-all to satisfy Node v22 parser
+app.options('/:any*', cors()); 
 
 // --- STATIC ASSETS ---
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
