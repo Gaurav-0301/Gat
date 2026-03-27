@@ -26,6 +26,8 @@ const allowedOrigins = [
   process.env.FRONTEND_URL
 ].filter(Boolean);
 
+// Applying CORS as a global middleware
+// This handles all OPTIONS requests automatically without needing app.options('*')
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
@@ -39,9 +41,6 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
-
-// FIXED: Using a named parameter catch-all to satisfy Node v22 parser
-app.options('/:any*', cors()); 
 
 // --- STATIC ASSETS ---
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
