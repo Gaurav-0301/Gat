@@ -43,7 +43,7 @@ app.use(cors({
 }));
 
 // Handle preflight requests globally
-app.options('*', cors()); 
+app.options('/*', cors()); 
 
 // --- STATIC ASSETS ---
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
