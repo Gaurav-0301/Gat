@@ -321,13 +321,13 @@ const verifyPass = async (req, res) => {
     }
 
     // Check if pass is within valid time
-    const now = new Date();
-    if (now < pass.validFrom || now > pass.validUntil) {
-      return res.status(400).json({ 
-        valid: false, 
-        error: 'Pass is not valid at this time' 
-      });
-    }
+    // const now = new Date();
+    // if (now < pass.validFrom || now > pass.validUntil) {
+    //   return res.status(400).json({ 
+    //     valid: false, 
+    //     error: 'Pass is not valid at this time' 
+    //   });
+    // }
 
     // Check if visitor is blacklisted
     const visitor = await Visitor.findById(pass.visitor);
