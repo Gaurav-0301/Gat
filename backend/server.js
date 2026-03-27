@@ -18,7 +18,7 @@ const CheckLog = require('./models/CheckLog');
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// --- UPDATED CORS CONFIG ---
+// --- CORS CONFIG ---
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:3001',
@@ -29,14 +29,10 @@ const allowedOrigins = [
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
-    
-    // Check if origin is allowed or is a local variant
     const isAllowed = allowedOrigins.includes(origin) || /localhost(:\d+)?$/.test(origin);
-    
     if (isAllowed) {
       return callback(null, true);
     }
-    
     return callback(new Error('Not allowed by CORS'));
   },
   credentials: true,
@@ -44,10 +40,8 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-/**
- * FIX: The "Missing parameter name" error.
- * Changed '/*' to '*' or '(.*)' to comply with newer path-to-regexp versions.
- */
+// FIXED LINE: This is the standard Express way to handle all preflights 
+// without triggering the "Missing parameter name" error in Node v22.
 app.options('*', cors()); 
 
 // --- STATIC ASSETS ---
@@ -64,8 +58,7 @@ app.use('/api/checklogs', checkLogRoutes);
 app.get('/', (req, res) => {
   res.status(200).json({ 
     status: 'success',
-    message: 'Gatekeeper API is live ✅',
-    timestamp: new Date().toISOString()
+    message: 'Gatekeeper API is live ✅'
   });
 });
 
@@ -76,38 +69,29 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     app.listen(PORT, () => {
       console.log(`✅ Server running on port ${PORT}`);
-      console.log('\n=== System Check ===');
-      console.log('FRONTEND_URL:', process.env.FRONTEND_URL || 'Using Localhost Defaults');
-      console.log('====================\n');
     });
 
-    // Auto-checkout scheduler logic remains here...
+    // Auto-checkout scheduler
     const MAX_DURATION_MIN = Number(process.env.AUTO_CHECKOUT_AFTER_MIN || 60);
     const INTERVAL_MIN = Number(process.env.AUTO_CHECKOUT_INTERVAL_MIN || 5);
 
-    const startAutoCheckoutJob = () => {
-      const intervalMs = Math.max(INTERVAL_MIN, 1) * 60000;
-      setInterval(async () => {
-        try {
-          const cutoff = new Date(Date.now() - MAX_DURATION_MIN * 60000);
-          const candidates = await CheckLog.find({
-            checkOutTime: null,
-            checkInTime: { $lte: cutoff }
-          }).limit(500);
+    setInterval(async () => {
+      try {
+        const cutoff = new Date(Date.now() - MAX_DURATION_MIN * 60000);
+        const candidates = await CheckLog.find({
+          checkOutTime: null,
+          checkInTime: { $lte: cutoff }
+        }).limit(500);
 
-          for (const log of candidates) {
-            const autoOut = new Date(log.checkInTime.getTime() + MAX_DURATION_MIN * 60000);
-            log.checkOutTime = autoOut;
-            log.notes = `${log.notes ? log.notes + ' ' : ''}[auto-checkout]`;
-            await log.save();
-          }
-        } catch (e) {
-          console.error('Auto-checkout error:', e.message);
+        for (const log of candidates) {
+          log.checkOutTime = new Date(log.checkInTime.getTime() + MAX_DURATION_MIN * 60000);
+          log.notes = `${log.notes ? log.notes + ' ' : ''}[auto-checkout]`;
+          await log.save();
         }
-      }, intervalMs);
-    };
-
-    startAutoCheckoutJob();
+      } catch (e) {
+        console.error('Job error:', e.message);
+      }
+    }, Math.max(INTERVAL_MIN, 1) * 60000);
   })
   .catch((err) => console.error('❌ DB Connection Error:', err));
 
