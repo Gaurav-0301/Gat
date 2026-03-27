@@ -1,4 +1,4 @@
-require('dotenv').config(); // Simplified for Render/Production
+require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -22,16 +22,18 @@ app.use(express.urlencoded({ extended: true }));
 const allowedOrigins = [
   'http://localhost:3000',
   'http://localhost:3001',
-  'https://gat-nine.vercel.app', // Your Vercel URL from screenshot
-  process.env.FRONTEND_URL        // From Render Environment Variables
+  'https://gat-nine.vercel.app', 
+  process.env.FRONTEND_URL
 ].filter(Boolean);
 
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or Postman)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.includes(origin) || /localhost(:\d+)?$/.test(origin)) {
+    // Check if origin is allowed or is a local variant
+    const isAllowed = allowedOrigins.includes(origin) || /localhost(:\d+)?$/.test(origin);
+    
+    if (isAllowed) {
       return callback(null, true);
     }
     
@@ -42,8 +44,11 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-// Handle preflight requests globally
-app.options('/*', cors()); 
+/**
+ * FIX: The "Missing parameter name" error.
+ * Changed '/*' to '*' or '(.*)' to comply with newer path-to-regexp versions.
+ */
+app.options('*', cors()); 
 
 // --- STATIC ASSETS ---
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -71,16 +76,12 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => {
     app.listen(PORT, () => {
       console.log(`✅ Server running on port ${PORT}`);
-      
-      // Professional Config Logs
       console.log('\n=== System Check ===');
       console.log('FRONTEND_URL:', process.env.FRONTEND_URL || 'Using Localhost Defaults');
-      console.log('EMAIL_SERVICE:', process.env.EMAIL_SERVICE ? '✓' : '❌');
-      console.log('CLOUDINARY:', process.env.CLOUDINARY_CLOUD_NAME ? '✓' : '❌');
       console.log('====================\n');
     });
 
-    // Auto-checkout scheduler
+    // Auto-checkout scheduler logic remains here...
     const MAX_DURATION_MIN = Number(process.env.AUTO_CHECKOUT_AFTER_MIN || 60);
     const INTERVAL_MIN = Number(process.env.AUTO_CHECKOUT_INTERVAL_MIN || 5);
 
@@ -94,16 +95,14 @@ mongoose.connect(process.env.MONGO_URI)
             checkInTime: { $lte: cutoff }
           }).limit(500);
 
-          if (!candidates || candidates.length === 0) return;
-
           for (const log of candidates) {
             const autoOut = new Date(log.checkInTime.getTime() + MAX_DURATION_MIN * 60000);
             log.checkOutTime = autoOut;
-            log.notes = `${log.notes ? log.notes + ' ' : ''}[auto-checkout after ${MAX_DURATION_MIN} min]`;
+            log.notes = `${log.notes ? log.notes + ' ' : ''}[auto-checkout]`;
             await log.save();
           }
         } catch (e) {
-          console.error('Auto-checkout background job error:', e.message);
+          console.error('Auto-checkout error:', e.message);
         }
       }, intervalMs);
     };
