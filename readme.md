@@ -3,9 +3,9 @@
 A comprehensive full-stack web application for managing visitor passes, appointments, and check-in/check-out processes for organizations.
 
 ## Deploy 
-- [Deploy](https://visitor-pass-management-system-mern.vercel.app/)
+- [Deploy](gat-nine.vercel.app)
 
-- [Video](https://www.loom.com/share/363a1035a04647199f06bbc81bc69df6)
+- [Photos](https://drive.google.com/file/d/1kO1bdYwBBIvu_Q2HVFdd0-HBy7J1Sshq/view?usp=sharing)
 
 ## 🏗️ Architecture
 
@@ -72,7 +72,7 @@ Create a `.env` file (use `.env.example` as template):
 MONGO_URI=mongodb://localhost:27017/visitor-pass-db
 JWT_SECRET=your-secret-key
 PORT=5000
-FRONTEND_URL=http://localhost:2724
+FRONTEND_URL=http://localhost:3000
 ```
 
 Start the backend:
@@ -89,7 +89,7 @@ npm install --legacy-peer-deps
 
 Create a `.env` file (use `.env.example` as template):
 ```env
-REACT_APP_API_URL=http://localhost:2724/api
+REACT_APP_API_URL=http://localhost:5000/api
 ```
 
 Start the frontend:
